@@ -2,46 +2,58 @@
 
 namespace Rechnerei\Inquiries\Http\Controllers;
 
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Http;
+use Inertia\Inertia;
 use Rechnerei\Inquiries\Settings;
+use Rechnerei\Inquiries\Support\SettingsBlueprint;
+use Statamic\Facades\Blueprint;
+use Statamic\Http\Controllers\CP\CpController;
+use Statamic\Support\Arr;
 
-class SettingsController extends Controller
+class SettingsController extends CpController
 {
-    public function edit(Settings $settings)
+    public function index(Settings $settings)
     {
-        return view('rechnerei-inquiries::settings', [
-            'settings' => $settings->all(),
+        $blueprint = Blueprint::make()->setContents(SettingsBlueprint::build());
+        $fields = $blueprint->fields()->addValues($settings->all())->preProcess();
+
+        return Inertia::render('rechnerei-inquiries::settings', [
+            'title' => 'Rechnerei Inquiries',
+            'action' => cp_route('rechnerei-inquiries.update'),
+            'testAction' => cp_route('rechnerei-inquiries.test'),
+            'initialBlueprint' => $blueprint->toPublishArray(),
+            'initialValues' => $fields->values()->all(),
+            'initialMeta' => $fields->meta(),
         ]);
     }
 
-    public function update(Request $request, Settings $settings): RedirectResponse
+    public function update(Request $request, Settings $settings): JsonResponse
     {
-        $data = $request->validate([
-            'enabled' => ['nullable', 'boolean'],
-            'endpoint' => ['nullable', 'url', 'max:255'],
-            'token' => ['nullable', 'string', 'max:255'],
-            'ignore_keywords' => ['nullable', 'string'],
-        ]);
+        $blueprint = Blueprint::make()->setContents(SettingsBlueprint::build());
+        $fields = $blueprint->fields()->addValues($request->all());
+
+        $fields->validate();
+
+        $values = Arr::removeNullValues($fields->process()->values()->all());
 
         $settings->save([
-            'enabled' => (bool) ($data['enabled'] ?? false),
-            'endpoint' => $data['endpoint'] ?? '',
-            'token' => $data['token'] ?? '',
-            'ignore_keywords' => $data['ignore_keywords'] ?? '',
+            'enabled' => (bool) ($values['enabled'] ?? false),
+            'endpoint' => $values['endpoint'] ?? '',
+            'token' => $values['token'] ?? '',
+            'ignore_keywords' => $values['ignore_keywords'] ?? '',
         ]);
 
-        return back()->with('success', __('Saved.'));
+        return response()->json(['message' => __('Saved.')]);
     }
 
-    public function test(Settings $settings): RedirectResponse
+    public function test(Settings $settings): JsonResponse
     {
         $s = $settings->all();
 
         if ($s['endpoint'] === '' || $s['token'] === '') {
-            return back()->with('error', __('Please save an endpoint URL and API token first.'));
+            return response()->json(['message' => __('Please save an endpoint URL and API token first.')], 422);
         }
 
         try {
@@ -55,12 +67,14 @@ class SettingsController extends Controller
             ]);
 
             if ($response->successful()) {
-                return back()->with('success', __('Test inquiry sent successfully. Check your Rechnerei inbox.'));
+                return response()->json(['message' => __('Test inquiry sent successfully. Check your Rechnerei inbox.')]);
             }
 
-            return back()->with('error', __('Test inquiry failed (:code). Double-check the endpoint URL and API token.', ['code' => $response->status()]));
+            return response()->json([
+                'message' => __('Test inquiry failed (:code). Double-check the endpoint URL and API token.', ['code' => $response->status()]),
+            ], 422);
         } catch (\Throwable $e) {
-            return back()->with('error', __('Test inquiry failed: :message', ['message' => $e->getMessage()]));
+            return response()->json(['message' => __('Test inquiry failed: :message', ['message' => $e->getMessage()])], 422);
         }
     }
 }

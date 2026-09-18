@@ -14,6 +14,13 @@ For every outgoing email it:
 
 Any error anywhere in this process is caught and logged, never allowed to bubble up into the request that triggered the email.
 
+The settings screen itself is a real Statamic blueprint (toggle/text/textarea fieldtypes) rendered through Statamic's own `PublishContainer` Vue component via Inertia — the same rendering code every core CP screen uses, so it looks and behaves like a native Statamic settings page rather than a hand-rolled HTML form. This requires **Statamic 6+** (its Inertia-based Control Panel); the compiled JS is committed under `dist/`, so installing still only takes Composer — no `npm install`/build step needed.
+
+## Requirements
+
+- Statamic 6.0+
+- PHP 8.1+
+
 ## Installation
 
 ```bash

@@ -20,17 +20,22 @@ class ServiceProvider extends AddonServiceProvider
         ],
     ];
 
+    protected $vite = [
+        'publicDirectory' => 'dist',
+        'input' => [
+            'resources/js/cp.js',
+        ],
+    ];
+
     public function bootAddon(): void
     {
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'rechnerei-inquiries');
-
         Permission::register('configure rechnerei inquiries', function ($permission) {
             $permission->label('Configure Rechnerei Inquiries')->group('Rechnerei Inquiries');
         });
 
         Nav::extend(function ($nav) {
             $nav->tools('Rechnerei Inquiries')
-                ->route('rechnerei-inquiries.edit')
+                ->route('rechnerei-inquiries.index')
                 ->icon('mail')
                 ->can('configure rechnerei inquiries');
         });
