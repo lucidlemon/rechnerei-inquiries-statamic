@@ -1,0 +1,27 @@
+{
+    "name": "rechnerei/statamic-inquiries",
+    "description": "Forwards outgoing site emails (Statamic form notifications, etc.) to your Rechnerei inquiries inbox, without ever affecting the original email delivery.",
+    "type": "statamic-addon",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1",
+        "statamic/cms": "^4.0 || ^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Rechnerei\\Inquiries\\": "src"
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Rechnerei Inquiries",
+            "description": "Forwards outgoing site emails to your Rechnerei inquiries inbox."
+        },
+        "laravel": {
+            "providers": [
+                "Rechnerei\\Inquiries\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
