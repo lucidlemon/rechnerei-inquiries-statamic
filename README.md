@@ -4,15 +4,30 @@ Forwards outgoing site emails (Statamic form notifications, auto-responders, etc
 
 ## How it works
 
-This addon listens to Laravel's `MessageSent` event, which fires **after** every outgoing email has already been handed to the mail transport — regardless of which Statamic form, notification, or app code sent it. Because it only observes mail that has already been sent, nothing it does can prevent, delay, or change the original email.
+The addon supports two modes, chosen on the settings screen:
+
+### All outgoing emails (default)
+
+Listens to Laravel's `MessageSent` event, which fires **after** every outgoing email has already been handed to the mail transport — regardless of which Statamic form, notification, or app code sent it. Because it only observes mail that has already been sent, nothing it does can prevent, delay, or change the original email.
 
 For every outgoing email it:
 
 1. Skips it if the subject/body matches a configured "ignore" phrase (password resets, failed jobs, backups, ...).
 2. Otherwise tries to extract a name, email address, phone number, and event date from the message's Reply-To header and body text.
-3. If anything useful was found, forwards it to your Rechnerei inquiries endpoint — deferred until after the HTTP response has already been sent to the visitor (via `dispatch(...)->afterResponse()`), so a slow or unreachable Rechnerei API can never add latency to a form submission, and no queue worker is required.
+3. If anything useful was found, forwards it to your Rechnerei inquiries endpoint.
 
-Any error anywhere in this process is caught and logged, never allowed to bubble up into the request that triggered the email.
+Since this listens to *emails*, a form that sends both an admin notification and a visitor confirmation copy produces two separate emails, and so two separate inquiries in Rechnerei.
+
+### Only selected forms
+
+Instead listens directly to Statamic's `FormSubmitted` event, which fires exactly **once per submission** — before any notification emails are even sent. Pick the forms to watch on the settings screen (their checkboxes are populated from your site's existing forms). For a matching submission it:
+
+1. Reads the submission's actual field values and maps them onto what Rechnerei expects, using each field's fieldtype and handle/label as a hint — a field of type "Email" (or handled/labelled `email`/`e-mail`) is used as the customer's email, a "Date" field (or handled/labelled `date`/`datum`/`termin`) as the event date, a `textarea` (or handled/labelled `message`/`nachricht`/`anfrage`) as the message, and so on. Falls back to the same best-effort text parsing as "All outgoing emails" mode for anything it can't confidently map.
+2. Forwards it to your Rechnerei inquiries endpoint, once, with every submitted field also included under `form.fields` (in case the Rechnerei API is later extended to use them).
+
+Because this fires once per submission regardless of how many recipients the form emails, it avoids the double-inquiry problem above and doesn't need the "ignore" list at all — you've already opted in by picking the form.
+
+In both modes, the outbound call is deferred until after the HTTP response has already been sent to the visitor (via `dispatch(...)->afterResponse()`), so a slow or unreachable Rechnerei API can never add latency to a form submission, and no queue worker is required. Any error anywhere in this process is caught and logged, never allowed to bubble up into the request that triggered it — including in "selected forms" mode, where a failure must never block the actual form submission.
 
 The settings screen itself is a real Statamic blueprint (toggle/text/textarea fieldtypes) rendered through Statamic's own `PublishContainer` Vue component via Inertia — the same rendering code every core CP screen uses, so it looks and behaves like a native Statamic settings page rather than a hand-rolled HTML form. This requires **Statamic 6+** (its Inertia-based Control Panel); the compiled JS is committed under `dist/`, so installing still only takes Composer — no `npm install`/build step needed.
 
@@ -34,8 +49,7 @@ composer require rechnerei/statamic-inquiries
 1. In Rechnerei, go to **Inquiries → Website integration** and copy the Endpoint URL and API Token.
 2. In the Statamic Control Panel, open **Rechnerei Inquiries** in the Tools section, paste both in, and save.
 3. Optionally use "Send test inquiry" to confirm the connection.
-
-No per-form configuration is needed — every form that sends a notification email through Statamic is covered automatically.
+4. Choose what to forward: leave it on "All outgoing emails" (no per-form setup needed — every form that sends a notification email is covered automatically), or switch to "Only selected forms" and tick the forms you want.
 
 ## Where settings are stored
 
