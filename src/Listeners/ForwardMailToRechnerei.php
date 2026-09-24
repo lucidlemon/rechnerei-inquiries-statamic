@@ -39,6 +39,14 @@ class ForwardMailToRechnerei
             return;
         }
 
+        // In "selected forms" mode, ForwardFormSubmissionToRechnerei
+        // already handles matching submissions directly (once per
+        // submission, with real field values) — forwarding here too would
+        // duplicate that inquiry.
+        if ($settings->mode() === 'selected_forms') {
+            return;
+        }
+
         $message = $event->message;
 
         if (!$message instanceof Email) {

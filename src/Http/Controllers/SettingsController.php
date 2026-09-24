@@ -43,6 +43,8 @@ class SettingsController extends CpController
             'endpoint' => $values['endpoint'] ?? '',
             'token' => $values['token'] ?? '',
             'ignore_keywords' => $values['ignore_keywords'] ?? '',
+            'mode' => $values['mode'] ?? 'all',
+            'forms' => array_values($values['forms'] ?? []),
         ]);
 
         return response()->json(['message' => __('Saved.')]);

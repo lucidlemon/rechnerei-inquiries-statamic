@@ -29,6 +29,8 @@ class Settings
             'endpoint' => '',
             'token' => '',
             'ignore_keywords' => implode("\n", $this->defaultIgnoreKeywords()),
+            'mode' => 'all',
+            'forms' => [],
         ];
     }
 
@@ -92,5 +94,28 @@ class Settings
         $lines = preg_split('/\r\n|\r|\n/', (string) $s['ignore_keywords']);
 
         return array_values(array_filter(array_map('trim', $lines), fn ($l) => $l !== ''));
+    }
+
+    /**
+     * 'all' forwards every outgoing email (the original MessageSent-based
+     * behaviour). 'selected_forms' instead listens directly to submissions
+     * of the chosen forms, which fires exactly once per submission and
+     * gives access to the actual field values.
+     */
+    public function mode(): string
+    {
+        $mode = $this->all()['mode'] ?? 'all';
+
+        return $mode === 'selected_forms' ? 'selected_forms' : 'all';
+    }
+
+    /**
+     * @return string[] handles of the forms to listen to when mode() is 'selected_forms'.
+     */
+    public function selectedForms(): array
+    {
+        $forms = $this->all()['forms'] ?? [];
+
+        return is_array($forms) ? array_values(array_filter($forms, fn ($f) => is_string($f) && $f !== '')) : [];
     }
 }
